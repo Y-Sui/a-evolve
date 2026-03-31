@@ -51,7 +51,17 @@ def make_workspace_bash(workspace_root: str | Path):
 
 def create_default_llm(config: EvolveConfig) -> LLMProvider:
     """Create the default LLM provider based on the evolver_model config string."""
+    import os
+
     model = config.evolver_model
+
+    # If OpenRouter env vars are set, use OpenAI-compatible provider
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+    openrouter_base = os.environ.get("OPENROUTER_BASE_URL")
+    if openrouter_key and openrouter_base:
+        from ...llm.openai import OpenAIProvider
+
+        return OpenAIProvider(model=model, api_key=openrouter_key, base_url=openrouter_base)
 
     if "." in model and ("anthropic" in model or "amazon" in model or "meta" in model):
         from ...llm.bedrock import BedrockProvider

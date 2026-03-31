@@ -17,6 +17,7 @@ from typing import Any
 
 from strands import Agent
 from strands.models import BedrockModel
+from strands.models.openai import OpenAIModel
 
 from ...protocol.base_agent import BaseAgent
 from ...types import Task, Trajectory
@@ -134,11 +135,24 @@ class SweAgent(BaseAgent):
         Returns:
             A tuple of (Agent, tool_modules) so the caller can reset modules.
         """
-        model = BedrockModel(
-            model_id=self.model_id,
-            region_name=self.region,
-            max_tokens=self.max_tokens,
-        )
+        # Use OpenAIModel (OpenRouter-compatible) if env vars are set, else Bedrock
+        openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+        openrouter_base = os.environ.get("OPENROUTER_BASE_URL")
+        if openrouter_key and openrouter_base:
+            model = OpenAIModel(
+                model_id=self.model_id,
+                client_args={
+                    "api_key": openrouter_key,
+                    "base_url": openrouter_base,
+                },
+                params={"max_tokens": self.max_tokens},
+            )
+        else:
+            model = BedrockModel(
+                model_id=self.model_id,
+                region_name=self.region,
+                max_tokens=self.max_tokens,
+            )
 
         system_prompt = self._build_system_prompt()
         tools, modules = self._load_tools_from_workspace()
