@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evolvable Layers 对比表</title>
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f4;
+    --bg-tertiary: #fafaf9;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --text-info: #185fa5;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --text-danger: #a32d2d;
+    --border: #e5e5e3;
+    --bg-success: #eaf3de;
+    --bg-danger: #fcebeb;
+    --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2c2c2a;
+      --bg-tertiary: #222221;
+      --text-primary: #e5e5e3;
+      --text-secondary: #9a9a96;
+      --text-info: #85b7eb;
+      --text-success: #97c459;
+      --text-warning: #ef9f27;
+      --text-danger: #f09595;
+      --border: #444441;
+      --bg-success: #27500a;
+      --bg-danger: #501313;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-tertiary); color: var(--text-primary); padding: 2rem; }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 1.5rem; }
+  .tbl-wrap { width: 100%; overflow-x: auto; border-radius: 12px; border: 0.5px solid var(--border); background: var(--bg-primary); }
+  table { border-collapse: collapse; width: 100%; min-width: 1400px; font-size: 13px; line-height: 1.6; }
+  th { background: var(--bg-secondary); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); position: sticky; top: 0; z-index: 2; }
+  th, td { border: 0.5px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+  tr:hover td { background: var(--bg-secondary); }
+  .layer-name { font-weight: 500; white-space: nowrap; }
+  code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-secondary); padding: 1px 5px; border-radius: 3px; }
+  .ex-label { font-weight: 500; color: var(--text-info); margin-top: 8px; display: block; font-size: 12px; }
+  .ex-label:first-child { margin-top: 0; }
+  .ex-code { font-family: var(--font-mono); font-size: 11.5px; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; margin: 4px 0 8px; display: block; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; }
+  .tag-true { background: var(--bg-success); color: var(--text-success); }
+  .tag-false { background: var(--bg-danger); color: var(--text-danger); }
+  .tag-low { background: var(--bg-success); color: var(--text-success); }
+  .tag-high { background: var(--bg-danger); color: var(--text-danger); }
+</style>
+</head>
+<body>
+<h1>Evolvable Layers 对比表</h1>
+<div class="tbl-wrap">
+<table>
+<thead>
+<tr>
+  <th style="min-width:80px">Layer</th>
+  <th style="min-width:80px">目录</th>
+  <th style="min-width:140px">核心用途</th>
+  <th style="min-width:90px">本质</th>
+  <th style="min-width:120px">必需文件</th>
+  <th style="min-width:100px">文件格式</th>
+  <th style="min-width:70px">默认进化</th>
+  <th style="min-width:160px">加载方式</th>
+  <th style="min-width:160px">进化方式</th>
+  <th style="min-width:70px">进化风险</th>
+  <th style="min-width:100px">Seed 阶段</th>
+  <th style="min-width:360px">Example</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+  <td class="layer-name" style="color: var(--text-info);">Prompts</td>
+  <td><code>prompts/</code></td>
+  <td>定义 agent 的问题解决策略与行为规则</td>
+  <td>文本（策略/规则）</td>
+  <td><code>system.md</code></td>
+  <td>Markdown</td>
+  <td><span class="tag tag-true">true</span></td>
+  <td>初始化时全量读入 <code>system.md</code>；可组合 fragments</td>
+  <td>分析失败 trajectory → 追加策略规则</td>
+  <td><span class="tag tag-low">低</span></td>
+  <td>提供初始 <code>system.md</code></td>
+  <td>
+    <span class="ex-label">prompts/system.md</span>
+    <span class="ex-code">You are an expert software engineer tasked with
+resolving GitHub issues by producing code patches.
+
+## Approach
+1. Understand the issue
+2. Locate relevant code
+3. Plan the fix
+4. Implement the fix
+5. Verify</span>
+    <span class="ex-label">进化追加的规则</span>
+    <span class="ex-code">## Learned Rules
+- 当构建失败时，先完整阅读错误信息再尝试修复。
+- 提交前，验证解决方案满足所有明确要求。</span>
+    <span class="ex-label">prompts/fragments/django-conventions.md</span>
+    <span class="ex-code">## Django-Specific Conventions
+- Always check if migrations are needed after model changes.
+- Use queryset.exists() instead of len(queryset) > 0.</span>
+  </td>
+</tr>
+
+<tr>
+  <td class="layer-name" style="color: var(--text-success);">Skills</td>
+  <td><code>skills/</code></td>
+  <td>维护可复用的领域知识库，封装特定类别问题的解决过程</td>
+  <td>文本（领域知识/过程）</td>
+  <td><code>{name}/SKILL.md</code><br>(含 YAML frontmatter)</td>
+  <td>Markdown + YAML frontmatter</td>
+  <td><span class="tag tag-true">true</span></td>
+  <td>初始化只读元数据列入系统提示词；正文通过 <code>read_skill()</code> 按需懒加载</td>
+  <td>提案→审核循环（ACCEPT / MERGE / SKIP）；也可直接变异</td>
+  <td><span class="tag tag-low">低</span></td>
+  <td>空</td>
+  <td>
+    <span class="ex-label">skills/entity-verification/SKILL.md</span>
+    <span class="ex-code">---
+name: entity-verification
+description: Strategies for verifying entities
+  against a data source before responding.
+---
+
+# Entity Verification
+
+## When to Apply
+Use when cross-referencing claims against a
+structured dataset (database, CSV, API response).
+
+## Procedure
+1. Identify all entities mentioned in the query.
+2. For each entity, execute a targeted lookup.
+3. Compare returned values against the claim.
+4. If any mismatch, flag it explicitly.</span>
+    <span class="ex-label">skills/test-driven-debug/SKILL.md</span>
+    <span class="ex-code">---
+name: test-driven-debug
+description: Use failing test output to guide
+  debugging when a patch breaks existing tests.
+---
+
+## Procedure
+1. Run broken test with -v flag
+2. Read assertion error (expected vs actual)
+3. Trace back to your edited code
+4. Fix root cause, not symptom</span>
+    <span class="ex-label">skills/_drafts/import-cycle-fix.md</span>
+    <span class="ex-code">草稿暂存，等待审核循环决定
+ACCEPT / MERGE / SKIP</span>
+  </td>
+</tr>
+
+<tr>
+  <td class="layer-name" style="color: var(--text-warning);">Memory</td>
+  <td><code>memory/</code></td>
+  <td>存储任务执行中的结构化学习成果，提供历史上下文</td>
+  <td>结构化数据（执行记录）</td>
+  <td><code>episodic.jsonl</code><br><code>semantic.jsonl</code></td>
+  <td>JSONL（每行一个 JSON）</td>
+  <td><span class="tag tag-true">true</span></td>
+  <td><code>read_all_memories()</code>，按 <code>task_id</code> 过滤注入 user prompt</td>
+  <td>Episodic: 记录每次任务结果<br>Semantic: 综合跨任务模式</td>
+  <td><span class="tag tag-low">低</span></td>
+  <td>空</td>
+  <td>
+    <span class="ex-label">memory/episodic.jsonl（每行一条）</span>
+    <span class="ex-code">{
+  "task_id": "django__django-13790",
+  "cycle": 2,
+  "score": 0.0,
+  "files_edited": [
+    "django/db/models/fields/related.py"
+  ],
+  "approach_summary": "Edited field descriptor
+    to handle None values. Tests still failing.",
+  "fail_to_pass_failing": [
+    "test_admin__test_dynamic_list_display"
+  ],
+  "pass_to_pass_broken": []
+}</span>
+    <span class="ex-code">{
+  "task_id": "django__django-13790",
+  "cycle": 3,
+  "score": 1.0,
+  "files_edited": [
+    "django/db/models/fields/related.py",
+    "django/contrib/admin/options.py"
+  ],
+  "approach_summary": "Also patched
+    ModelAdmin.get_list_display. All tests pass.",
+  "fail_to_pass_failing": [],
+  "pass_to_pass_broken": []
+}</span>
+    <span class="ex-label">memory/semantic.jsonl</span>
+    <span class="ex-code">{
+  "pattern": "Django admin 相关任务通常需要
+    检查 ModelAdmin.get_list_display",
+  "source_tasks": [
+    "django__django-13790",
+    "django__django-14855"
+  ],
+  "confidence": 0.8
+}</span>
+    <span class="ex-code">{
+  "pattern": "When fixing Flask blueprint issues,
+    always check both Blueprint and App level.",
+  "source_tasks": [
+    "flask__flask-4992",
+    "flask__flask-5014"
+  ],
+  "confidence": 0.7
+}</span>
+  </td>
+</tr>
+
+<tr>
+  <td class="layer-name" style="color: var(--text-danger);">Tools</td>
+  <td><code>tools/</code></td>
+  <td>提供 agent 可调用的可执行工具实现</td>
+  <td>可执行代码（Python）</td>
+  <td><code>registry.yaml</code><br>+ <code>*.py</code></td>
+  <td>YAML + Python<br>(<code>@tool</code> 装饰器)</td>
+  <td><span class="tag tag-false">false</span></td>
+  <td>读 <code>registry.yaml</code> → 动态 import <code>.py</code> → 注册到 strands agent</td>
+  <td>修改实现 / 添加新工具 / 调整描述（默认关闭）</td>
+  <td><span class="tag tag-high">高</span></td>
+  <td>提供初始工具集</td>
+  <td>
+    <span class="ex-label">tools/registry.yaml</span>
+    <span class="ex-code">tools:
+  - name: bash
+    description: "Execute a bash command
+      inside the Docker container."
+    file: bash.py
+  - name: text_editor
+    description: "Edit files with structured
+      commands (view, create, str_replace,
+      insert, undo_edit)."
+    file: text_editor.py
+  - name: python_exec
+    description: "Execute Python code directly.
+      Each call is independent."
+    file: python_exec.py
+  - name: submit
+    description: "Submit your solution
+      and end the task."
+    file: submit.py</span>
+    <span class="ex-label">tools/bash.py</span>
+    <span class="ex-code">from strands import tool
+
+@tool
+def bash(
+    command: str,
+    workdir: str = "/testbed"
+) -> str:
+    """Execute a bash command inside
+    the Docker container."""
+    import subprocess
+    result = subprocess.run(
+        command, shell=True,
+        cwd=workdir,
+        capture_output=True,
+        text=True, timeout=120
+    )
+    return result.stdout + result.stderr
+
+def reset(**kwargs):
+    """Called before each task
+    to reset tool state."""
+    pass</span>
+  </td>
+</tr>
+
+</tbody>
+</table>
+</div>
+</body>
+</html>
