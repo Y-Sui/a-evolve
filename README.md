@@ -146,35 +146,7 @@ print(f"Final score: {results.final_score:.3f}")
 print(f"Converged:   {results.converged}")
 ```
 
-A-Evolve ships with built-in seed workspaces for `swe`, `mcp`, and `terminal`, plus a dedicated SkillBench workspace under `seed_workspaces/skillbench`. Built-in benchmark adapters include `swe-verified`, `mcp-atlas`, `terminal-bench 2.0`, and `skill-bench`.
-
-### SkillBench Setup
-
-Install the SkillBench runtime extras first:
-
-```bash
-pip install -e ".[skillbench,dev]"
-```
-
-On first SkillBench run, A-Evolve can auto-bootstrap the public [`benchflow-ai/skillsbench`](https://github.com/benchflow-ai/skillsbench) repo into `~/.cache/agent-evolve/skillbench/<ref>/repo` by default. The pinned default ref is `828bb921fb94dc065bfefd6bac4e8938be3f71e0`, which matches the vendored Terminus pin used by this repo.
-
-Native example:
-
-```bash
-python examples/skillbench_examples/skillbench_solve_one.py \
-  --mode native \
-  --use-skills true
-```
-
-Harbor example:
-
-```bash
-python examples/skillbench_examples/skillbench_solve_one.py \
-  --mode harbor \
-  --use-skills false
-```
-
-You can override the auto-bootstrap with `SKILLBENCH_REPO_DIR`, `SKILLBENCH_REPO_REF`, `SKILLBENCH_TASKS_DIR`, `SKILLBENCH_TASKS_NO_SKILLS_DIR`, or `SKILLBENCH_HARBOR_REPO`. For the full setup matrix and troubleshooting guide, see [SkillBench Setup Guide](docs/skillbench-setup.md).
+A-Evolve ships with built-in seed workspaces (`swe`, `mcp`, `terminal`, `skillbench`) and benchmark adapters (`swe-verified`, `mcp-atlas`, `terminal-bench 2.0`, `skill-bench`). Point `agent=` at any of them — or at your own workspace directory.
 
 ### 3. Bring Your Own Agent (BYOA)
 
