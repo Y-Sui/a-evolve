@@ -1,0 +1,26 @@
+experiment_id: "p2-guided-synth-internal-swe-bench-gold"
+description: "Qwen3.5 + guided_synth on internal-swe-bench gold subset (30 tasks)"
+phase: 2
+
+model_id: "qwen/qwen3.5-397b-a17b"
+
+dataset: "/home/yuansui/swe-workspace/data/all_instances_annotated_20260322_v2_gold.jsonl"
+benchmark: "internal-swe"
+namespace: "swebench"
+limit: 30
+batch_size: 15
+parallel: 15
+max_steps: 140
+window_size: 70
+max_tokens: 16384
+feedback: "none"
+
+efficiency_prompt: true
+solver_proposes: true
+verification_focus: true
+
+no_evolve: false
+algorithm: "guided_synth"
+
+seed_workspace: "seed_workspaces/swe"
+output_dir: "experiments/qwen35-swe/logs/p2-guided-synth-internal-swe-bench-gold"

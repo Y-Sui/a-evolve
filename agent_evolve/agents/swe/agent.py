@@ -218,6 +218,18 @@ class SweAgent(BaseAgent):
         tool_call_trace: list[dict] = []
 
         with container:
+            # Apply mask_patch if present (SWE-Smith instances: simulates the bug)
+            mask_patch = task.metadata.get("mask_patch", "")
+            if mask_patch and mask_patch.strip():
+                logger.info("Applying mask_patch for %s (%d chars)", instance_id, len(mask_patch))
+                container.exec(f"cat <<'EOF_MASK' > /tmp/mask.diff\n{mask_patch}\nEOF_MASK")
+                result = container.exec(
+                    "cd /testbed && git apply /tmp/mask.diff 2>&1 "
+                    "|| git apply --reject /tmp/mask.diff 2>&1 "
+                    "|| patch --batch --fuzz=5 -p1 -i /tmp/mask.diff 2>&1"
+                )
+                logger.debug("mask_patch apply output: %s", result[:500])
+
             agent, tool_modules = self._build_strands_agent()
             self._reset_tool_modules(tool_modules, container_name=container.container_name)
 

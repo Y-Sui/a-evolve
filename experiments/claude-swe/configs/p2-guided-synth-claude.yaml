@@ -1,0 +1,24 @@
+experiment_id: "p2-guided-synth-claude"
+description: "Evolution with GuidedSynthesisEngine (v32g config), mini 50 tasks"
+phase: 2
+
+model_id: "anthropic/claude-opus-4.6"
+
+dataset: "MariusHobbhahn/swe-bench-verified-mini"
+limit: 50
+batch_size: 25
+parallel: 25
+max_steps: 140
+window_size: 70
+max_tokens: 16384
+feedback: "none"
+
+efficiency_prompt: true
+solver_proposes: true
+verification_focus: true
+
+no_evolve: false
+algorithm: "guided_synth"
+
+seed_workspace: "seed_workspaces/swe"
+output_dir: "experiments/claude-swe/logs/p2-guided-synth"

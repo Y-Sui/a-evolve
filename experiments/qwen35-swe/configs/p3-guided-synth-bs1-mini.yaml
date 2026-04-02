@@ -1,0 +1,24 @@
+experiment_id: "p3-guided-synth-bs1-mini"
+description: "Qwen3.5 + guided_synth, batch_size=1, SWE-bench Verified Mini (50 tasks)"
+phase: 3
+
+model_id: "qwen/qwen3.5-397b-a17b"
+
+dataset: "MariusHobbhahn/swe-bench-verified-mini"
+limit: 50
+batch_size: 1
+parallel: 1
+max_steps: 140
+window_size: 70
+max_tokens: 16384
+feedback: "none"
+
+efficiency_prompt: true
+solver_proposes: true
+verification_focus: true
+
+no_evolve: false
+algorithm: "guided_synth"
+
+seed_workspace: "seed_workspaces/swe"
+output_dir: "experiments/qwen35-swe/logs/p3-guided-synth-bs1-mini"

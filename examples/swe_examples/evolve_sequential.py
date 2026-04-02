@@ -29,6 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from agent_evolve.agents.swe.agent import SweAgent
 from agent_evolve.algorithms.guided_synth.engine import GuidedSynthesisEngine
+from agent_evolve.algorithms.skillforge.engine import AEvolveEngine
+from agent_evolve.algorithms.adaptive_skill.engine import AdaptiveSkillEngine
 from agent_evolve.benchmarks.swe_verified_mini.benchmark import SweVerifiedMiniBenchmark
 from agent_evolve.config import EvolveConfig
 from agent_evolve.engine.observer import Observer
@@ -47,6 +49,9 @@ def solve_one_task(
     window_size: int = 40,
     verification_focus: bool = False,
     efficiency_prompt: bool = False,
+    benchmark_type: str = "swe-verified-mini",
+    dataset_path: str = "",
+    namespace: str | None = None,
 ) -> dict:
     """Solve a single task in its own process. Workspace is read-only during batch."""
     import logging
@@ -82,11 +87,16 @@ def solve_one_task(
         efficiency_prompt=efficiency_prompt,
     )
 
-    bm = SweVerifiedMiniBenchmark(shuffle=False)
+    if benchmark_type == "internal-swe":
+        from agent_evolve.benchmarks.internal_swe import InternalSweBenchmark
+        bm = InternalSweBenchmark(dataset_path=dataset_path, namespace=namespace, shuffle=False)
+    else:
+        bm = SweVerifiedMiniBenchmark(shuffle=False)
 
     t0 = time.time()
     trajectory = None
-    for attempt in range(3):
+    max_retries = 5
+    for attempt in range(max_retries):
         try:
             trajectory = agent.solve(task)
             break
@@ -95,11 +105,22 @@ def solve_one_task(
             transient = any(k in err_str for k in (
                 "internalServerException", "ThrottlingException",
                 "timed out", "Read timed out", "ServiceUnavailableException",
+                # API gateway / proxy errors
+                "Error code: 500", "Error code: 502", "Error code: 503",
+                "Error code: 429",
+                "model_not_found", "No available channel",
+                "failed to connect", "tls error",
+                "connection slots", "query_data_error",
+                # Token / auth errors (may be transient if gateway DB is overloaded)
+                "无效的令牌", "数据库查询出错",
             ))
-            if transient and attempt < 2:
-                wait = 30 * (attempt + 1)
-                log.warning("solve attempt %d failed (transient), retrying in %ds: %s",
-                            attempt + 1, wait, e)
+            if transient and attempt < max_retries - 1:
+                import random
+                base_wait = min(30 * (2 ** attempt), 300)  # exponential: 30, 60, 120, 240
+                jitter = random.uniform(0, base_wait * 0.3)
+                wait = base_wait + jitter
+                log.warning("solve attempt %d/%d failed (transient), retrying in %.0fs: %s",
+                            attempt + 1, max_retries, wait, e)
                 time.sleep(wait)
                 continue
             log.error("solve failed after %d attempt(s): %s", attempt + 1, e)
@@ -202,6 +223,14 @@ def main():
                    help="HuggingFace dataset name (default: swe-bench-verified-mini)")
     p.add_argument("--limit", type=int, default=50,
                    help="Max tasks to solve (default: 50)")
+    p.add_argument("--algorithm", type=str, default="guided_synth",
+                   choices=["guided_synth", "skillforge", "adaptive_skill"],
+                   help="Evolution algorithm (default: guided_synth)")
+    p.add_argument("--benchmark", type=str, default="swe-verified-mini",
+                   choices=["swe-verified-mini", "internal-swe"],
+                   help="Benchmark type (default: swe-verified-mini)")
+    p.add_argument("--namespace", type=str, default=None,
+                   help="Docker image namespace for internal-swe (e.g. swebench)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args()
 
@@ -217,7 +246,15 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load all tasks
-    bm = SweVerifiedMiniBenchmark(dataset_name=args.dataset, shuffle=False)
+    if args.benchmark == "internal-swe":
+        from agent_evolve.benchmarks.internal_swe import InternalSweBenchmark
+        bm = InternalSweBenchmark(
+            dataset_path=args.dataset,
+            namespace=args.namespace,
+            shuffle=False,
+        )
+    else:
+        bm = SweVerifiedMiniBenchmark(dataset_name=args.dataset, shuffle=False)
     tasks = bm.get_tasks(split="test", limit=args.limit)
     logger.info("Loaded %d tasks", len(tasks))
 
@@ -235,10 +272,18 @@ def main():
     observer = Observer(evolution_dir)
 
     config = EvolveConfig(evolver_model=args.model_id, extra={"region": args.region})
-    evolver = GuidedSynthesisEngine(config, write_memory=False,
-                                     verification_focus=getattr(args, 'verification_focus', False))
+
+    if args.algorithm == "guided_synth":
+        evolver = GuidedSynthesisEngine(config, write_memory=False,
+                                         verification_focus=getattr(args, 'verification_focus', False))
+    elif args.algorithm == "skillforge":
+        evolver = AEvolveEngine(config)
+    elif args.algorithm == "adaptive_skill":
+        evolver = AdaptiveSkillEngine(config)
+
     n_batches = (len(tasks) + args.batch_size - 1) // args.batch_size
-    evolver.MAX_INTERVENTIONS = n_batches  # one intervention per batch
+    if hasattr(evolver, 'MAX_INTERVENTIONS'):
+        evolver.MAX_INTERVENTIONS = n_batches
 
     # Track results
     all_results = []
@@ -274,6 +319,8 @@ def main():
                     args.max_steps, args.window_size,
                     args.verification_focus,
                     getattr(args, 'efficiency_prompt', False),
+                    args.benchmark, args.dataset,
+                    getattr(args, 'namespace', None),
                 ): td["id"]
                 for td in task_dicts
             }

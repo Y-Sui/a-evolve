@@ -46,6 +46,7 @@ _BENCHMARK_REGISTRY: dict[str, str] = {
     "terminal2": "agent_evolve.benchmarks.terminal2.Terminal2Benchmark",
     "terminal-bench": "agent_evolve.benchmarks.terminal2.Terminal2Benchmark",
     "skill-bench": "agent_evolve.benchmarks.skill_bench.SkillBenchBenchmark",
+    "internal-swe": "agent_evolve.benchmarks.internal_swe.InternalSweBenchmark",
 }
 
 # Registry of seed workspace names -> paths (relative to package root)

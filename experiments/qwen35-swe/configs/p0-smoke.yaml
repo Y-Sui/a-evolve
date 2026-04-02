@@ -1,0 +1,24 @@
+experiment_id: "p0-smoke"
+description: "Smoke test: verify OpenRouter + Qwen3.5 + Docker eval pipeline"
+phase: 0
+
+model_id: "qwen/qwen3.5-397b-a17b"
+
+dataset: "MariusHobbhahn/swe-bench-verified-mini"
+limit: 2
+batch_size: 2
+parallel: 2
+max_steps: 140
+window_size: 70
+max_tokens: 16384
+feedback: "none"
+
+efficiency_prompt: true
+solver_proposes: false
+verification_focus: false
+
+no_evolve: true
+algorithm: "guided_synth"
+
+seed_workspace: "seed_workspaces/swe"
+output_dir: "experiments/qwen35-swe/logs/p0-smoke"
