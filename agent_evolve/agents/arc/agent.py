@@ -231,12 +231,14 @@ class ArcAgent(BaseAgent):
                 )
                 current_level = new_level
             else:
+                remaining_after = max_actions - total_actions
                 logger.info(
-                    "Level %d not completed after %d actions",
-                    current_level, actions_used,
+                    "Level %d not completed after %d actions. %d budget remaining.",
+                    current_level, actions_used, remaining_after,
                 )
-                # Move on to avoid infinite loop -- level didn't complete
-                break
+                # Keep trying if we have substantial budget left
+                if remaining_after < 15:
+                    break
 
         elapsed = time.time() - t0
 
