@@ -69,7 +69,8 @@ By applying our open-source **reference evolution algorithms** to a base Claude 
 > *All results achieved with a single Claude Opus-4.6 base model, evolved using A-Evolve's sample algorithms. 0 hours of human harness engineering. Data checked March 2026.*
 
 ### News
-
+- **04/03** **Integration**, A-Evolve added new evolutionary algorithm Meta-Harness
+- **03/30** **Integration**, A-Evolve is officially integrated into [AutoResearchClaw](https://github.com/aiming-lab/AutoResearchClaw) 
 - **03/25** 🚀 **Open-source A-Evolve**, the universal infrastructure for developing and testing evolving algorithms.
 - **03/25** 📊 **Open-source 4 evolving algorithms** developed with A-Evolve, achieving SOTA **(#1, ~#5, ~#7, #2)** on MCP-Atlas, SWE-bench Verified, Terminal-Bench 2.0, and SkillsBench.
 - **02/17** 📄 Release the official implementation of [*Position: Agentic Evolution is the Path to Evolving LLMs*](https://arxiv.org/abs/2602.00359) (arXiv 2602.00359).
@@ -124,9 +125,16 @@ mcp_agent/
 ## Quick Start
 
 ### 1. Install
-Install from source with all dependencies:
 
 ```bash
+# PyPI (recommended)
+pip install a-evolve              # core
+pip install a-evolve[anthropic]   # Claude support
+pip install a-evolve[mcp]         # MCP-Atlas benchmark
+pip install a-evolve[swe]         # SWE-bench benchmark
+pip install a-evolve[all]         # everything
+
+# From source (for development)
 git clone https://github.com/A-EVO-Lab/a-evolve.git && cd a-evolve
 pip install -e ".[all,dev]"
 ```
@@ -170,7 +178,7 @@ results = evolver.run(cycles=10)
 
 Your agent's evolvable state (prompts, skills, memory) lives as a standard directory — the [Agent Workspace](#the-agent-workspace-a-file-system-contract). A-Evolve mutates these files; your agent reloads. See [Architecture & Design](#architecture--design) for the full picture.
 
-For benchmark-specific walkthroughs, see [SWE-bench Demo Guide](docs/swe-bench-demo.md) and [MCP-Atlas Demo Guide](docs/mcp-atlas-demo.md).
+For benchmark-specific walkthroughs, see [SWE-bench Demo Guide](docs/swe-bench-demo.md), [MCP-Atlas Demo Guide](docs/mcp-atlas-demo.md), and [SkillBench Setup Guide](docs/skillbench-setup.md).
 
 ---
 
@@ -220,7 +228,7 @@ A-Evolve ships with ready-to-use benchmark adapters and seed workspaces:
 | [`swe-verified`](docs/swe-bench-demo.md) | Real-world GitHub issues (Python repos) | `seed_workspaces/swe/` | **76.8%** (~#5) |
 | [`mcp-atlas`](docs/mcp-atlas-demo.md) | Tool-calling via MCP (16+ servers) | `seed_workspaces/mcp/` | **79.4%** (🥇 #1) |
 | [`terminal-bench`](docs/terminal-bench-demo.md) | Terminal/CLI ops in Docker | `seed_workspaces/terminal/` | **76.5%** (~#7) |
-| [`skill-bench`](docs/skill-bench-demo.md) | Agentic skill discovery | `seed_workspaces/reasoning/` | **34.9%** (~#2)|
+| [`skill-bench`](docs/skillbench-setup.md) | Agentic skill discovery | `seed_workspaces/skillbench/` | **34.9%** (~#2)|
 
 ### Pluggability: Bring Your Own Everything
 
