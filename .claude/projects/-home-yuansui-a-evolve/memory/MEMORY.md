@@ -1,0 +1,3 @@
+- [Qwen3.5 experiment](project_qwen35_experiment.md) — Self-evolution experiment with Qwen3.5-397B on SWE-bench Verified
+- [Do not kill tmux sessions](feedback_tmux_sessions.md) — Never kill existing tmux sessions when starting new experiments
+- [Parallel=25](feedback_parallel_25.md) — All experiments should use parallel=25

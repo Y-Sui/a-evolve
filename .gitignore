@@ -65,7 +65,7 @@ evolution_workdir
 logs/
 swe_results*/
 .crowdresearch/
-.claude/
+# .claude/
 
 # Local legacy compatibility package
 agent_evolve/algorithms/aevolve/
