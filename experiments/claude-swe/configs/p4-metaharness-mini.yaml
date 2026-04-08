@@ -1,0 +1,44 @@
+experiment_id: "p4-metaharness-mini"
+description: "Claude Opus 4.6 + Meta-Harness evolution, SWE-bench Verified Mini 50 tasks"
+phase: 4
+
+# Task / Dataset
+model_id: "anthropic/claude-opus-4.6"
+dataset: "MariusHobbhahn/swe-bench-verified-mini"
+limit: 50
+
+# Solver agent config (same as baseline v2 for fair comparison)
+max_steps: 140
+window_size: 120
+max_tokens: 128000
+efficiency_prompt: false
+
+# Evolution config
+algorithm: "meta_harness"
+batch_size: 50           # full benchmark per eval cycle
+max_cycles: 5            # 5 evolution rounds
+holdout_ratio: 0.0       # no holdout, search + eval on same tasks
+evolve_prompts: true
+evolve_skills: true
+evolve_memory: true
+evolve_tools: true
+egl_threshold: 0.02
+egl_window: 3
+
+# MetaHarnessEngine extras
+harness_enabled: true
+proposer_model: "anthropic/claude-opus-4.6"
+proposer_api_base: "https://api.miromind.site"
+proposer_max_turns: 200
+proposer_timeout_sec: 3600
+num_candidates: 2
+eval_sample_size: 0       # 0 = all 50 tasks per candidate eval
+rollback_on_regression: false
+
+# Solver / eval
+parallel: 25              # parallel solve workers
+max_retries: 5
+
+# Workspace
+seed_workspace: "seed_workspaces/swe"
+output_dir: "experiments/claude-swe/logs/p4-metaharness-mini"

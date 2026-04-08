@@ -19,7 +19,8 @@ egl_window: 3
 
 # MetaHarnessEngine extras
 harness_enabled: true
-proposer_model: us.anthropic.claude-opus-4-6-v1
+proposer_model: anthropic/claude-opus-4.6
+proposer_api_base: https://api.miromind.site
 proposer_max_turns: 50
 proposer_timeout_sec: 900
 num_candidates: 2

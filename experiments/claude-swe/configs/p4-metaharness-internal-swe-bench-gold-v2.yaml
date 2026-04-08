@@ -1,0 +1,46 @@
+experiment_id: "p4-metaharness-internal-swe-bench-gold-v2"
+description: "Claude Opus 4.6 solver + proposer, Meta-Harness, Internal SWE-bench Gold 30 tasks (v2: no efficiency_prompt, window_size=120, max_turns=200)"
+phase: 4
+
+# Task / Dataset
+model_id: "anthropic/claude-opus-4.6"
+dataset: "/home/yuansui/swe-workspace/data/all_instances_annotated_20260322_v2_gold.jsonl"
+benchmark: "internal-swe"
+namespace: "swebench"
+limit: 30
+
+# Solver agent config
+max_steps: 140
+window_size: 120
+max_tokens: 128000
+efficiency_prompt: false
+
+# Evolution config
+algorithm: "meta_harness"
+batch_size: 30
+max_cycles: 3
+holdout_ratio: 0.0
+evolve_prompts: true
+evolve_skills: true
+evolve_memory: true
+evolve_tools: true
+egl_threshold: 0.02
+egl_window: 3
+
+# MetaHarnessEngine extras
+harness_enabled: true
+proposer_model: "anthropic/claude-opus-4.6"
+proposer_api_base: "https://api.miromind.site"
+proposer_max_turns: 200
+proposer_timeout_sec: 3600
+num_candidates: 2
+eval_sample_size: 0
+rollback_on_regression: false
+
+# Solver / eval
+parallel: 30
+max_retries: 5
+
+# Workspace
+seed_workspace: "seed_workspaces/swe"
+output_dir: "experiments/claude-swe/logs/p4-metaharness-internal-swe-bench-gold-v2"

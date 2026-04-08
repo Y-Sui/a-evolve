@@ -202,7 +202,24 @@ class SweAgent(BaseAgent):
         Expects task.metadata to contain:
           - docker_image: str (SWE-bench Docker image name)
           - instance_id: str (optional, defaults to task.id)
+
+        Optional harness hooks (from harness.py):
+          - pre_solve(metadata) -> dict: merged into task.metadata
+          - build_system_prompt(base, skills) -> str
+          - build_user_prompt(instance_id, problem, memories) -> str | None
         """
+        pre_solve_hook = self.harness_hook("pre_solve")
+        if pre_solve_hook:
+            try:
+                extra_meta = pre_solve_hook(dict(task.metadata))
+                if isinstance(extra_meta, dict):
+                    merged = dict(task.metadata)
+                    merged.update(extra_meta)
+                    task = Task(id=task.id, input=task.input, metadata=merged)
+                    logger.info("pre_solve hook updated metadata for %s", task.id)
+            except Exception as e:
+                logger.warning("harness pre_solve hook failed, ignoring: %s", e)
+
         docker_image = task.metadata.get("docker_image", "")
         instance_id = task.metadata.get("instance_id", task.id)
         problem_statement = task.input
@@ -491,7 +508,17 @@ class SweAgent(BaseAgent):
         Includes the base prompt, any evolved prompt fragments, and skills.
         Memories are injected into the user prompt via ``_build_user_prompt``
         so they appear once, in the task-specific context.
+
+        If ``harness.py`` defines a ``build_system_prompt(base, skills)``
+        hook, it replaces the entire assembly logic below.
         """
+        hook = self.harness_hook("build_system_prompt")
+        if hook:
+            try:
+                return hook(self.system_prompt, self.skills)
+            except Exception as e:
+                logger.warning("harness build_system_prompt hook failed, falling back: %s", e)
+
         parts = [self.system_prompt]
 
         # Verify-fix loop instruction
@@ -562,6 +589,15 @@ class SweAgent(BaseAgent):
         return "\n".join(parts)
 
     def _build_user_prompt(self, instance_id: str, problem_statement: str) -> str:
+        hook = self.harness_hook("build_user_prompt")
+        if hook:
+            try:
+                result = hook(instance_id, problem_statement, self.memories)
+                if result is not None:
+                    return result
+            except Exception as e:
+                logger.warning("harness build_user_prompt hook failed, falling back: %s", e)
+
         # Build memory context from previous attempts
         memory_section = ""
         if self.memories:

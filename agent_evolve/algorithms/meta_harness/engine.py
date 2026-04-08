@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
@@ -33,9 +34,8 @@ from .prompts import build_proposer_prompt
 
 logger = logging.getLogger(__name__)
 
-# Default model: Opus 4.6 via Claude Code CLI (same as the paper)
-# Note: Claude Code CLI uses raw Bedrock model IDs without the "bedrock:" prefix
-DEFAULT_MODEL = "us.anthropic.claude-opus-4-6-v1"
+# Default model: Opus 4.6 via OpenRouter (through miromind proxy)
+DEFAULT_MODEL = "anthropic/claude-opus-4.6"
 
 # Workspace files to snapshot into each candidate archive
 _SNAPSHOT_DIRS = ("prompts", "skills", "memory", "tools", ".claude")
@@ -70,7 +70,7 @@ class MetaHarnessEngine(EvolutionEngine):
 
     def __init__(self, config: EvolveConfig):
         self.config = config
-        self.harness_enabled: bool = config.extra.get("harness_enabled", False)
+        self.harness_enabled: bool = config.extra.get("harness_enabled", True)
         self.model: str = config.extra.get("proposer_model", DEFAULT_MODEL)
         self.max_turns: int = config.extra.get("proposer_max_turns", 50)
         self.timeout_sec: int = config.extra.get("proposer_timeout_sec", 600)
@@ -351,6 +351,7 @@ class MetaHarnessEngine(EvolutionEngine):
                 workspace, cand_dir, p["snapshot_files"],
                 score, cost, cycle_num, p["index"], p["proposer_result"],
                 valid=p["valid"], validation_err=p["validation_err"],
+                diff=p["diff"],
             )
 
             candidates.append({
@@ -399,6 +400,7 @@ class MetaHarnessEngine(EvolutionEngine):
                 workspace, cand_dir, p["snapshot_files"],
                 0.0, 0.0, cycle_num, p["index"], p["proposer_result"],
                 valid=False, validation_err=p["validation_err"],
+                diff=p["diff"],
             )
             candidates.append({
                 "index": p["index"],
@@ -465,6 +467,7 @@ class MetaHarnessEngine(EvolutionEngine):
                             result["score"], result["cost"],
                             cycle_num, result["index"], result["proposer_result"],
                             valid=True, validation_err="",
+                            diff=result.get("diff", ""),
                         )
                         candidates.append(result)
                         logger.info(
@@ -527,6 +530,7 @@ class MetaHarnessEngine(EvolutionEngine):
         *,
         valid: bool = True,
         validation_err: str = "",
+        diff: str = "",
     ) -> None:
         """Archive a candidate using a pre-captured snapshot."""
         cand_dir.mkdir(parents=True, exist_ok=True)
@@ -556,7 +560,16 @@ class MetaHarnessEngine(EvolutionEngine):
             json.dumps(scores_data, indent=2)
         )
 
-        # 3. Link traces
+        # 3. Save diff (what the proposer changed)
+        if diff:
+            (cand_dir / "changes.diff").write_text(diff)
+
+        # 4. Save proposer reasoning (output from Claude Code)
+        proposer_output = proposer_result.get("output", "")
+        if proposer_output:
+            (cand_dir / "proposer_reasoning.md").write_text(proposer_output)
+
+        # 5. Link traces
         traces_dir = cand_dir / "traces"
         traces_dir.mkdir(exist_ok=True)
         obs_dir = workspace.root / "evolution" / "observations"
@@ -712,11 +725,65 @@ class MetaHarnessEngine(EvolutionEngine):
     # Claude Code CLI invocation
     # ------------------------------------------------------------------
 
+    def _build_claude_env(self) -> dict[str, str]:
+        """Build environment variables for Claude Code CLI.
+
+        When ``proposer_api_base`` is configured (or ANTHROPIC_BASE_URL is
+        set), routes the CLI through an OpenRouter-compatible proxy.
+        Falls back to the default Anthropic API otherwise.
+
+        Claude Code CLI requires ``--model opus/sonnet/haiku`` (not raw
+        OpenRouter IDs like ``anthropic/claude-opus-4.6``).  The actual
+        model is specified via ``ANTHROPIC_DEFAULT_OPUS_MODEL`` etc.
+        """
+        env = os.environ.copy()
+
+        api_base = self.config.extra.get("proposer_api_base") or env.get("ANTHROPIC_BASE_URL")
+        api_key = env.get("OPENROUTER_API_KEY", "")
+
+        if api_base and api_key:
+            env["ANTHROPIC_BASE_URL"] = api_base
+            env["ANTHROPIC_AUTH_TOKEN"] = api_key
+            env["ANTHROPIC_API_KEY"] = ""  # must blank out to avoid conflicts
+            # Map the configured model to the correct override env var.
+            # Claude Code only accepts --model opus/sonnet/haiku; the
+            # actual OpenRouter model ID is set via these env vars.
+            env["ANTHROPIC_DEFAULT_OPUS_MODEL"] = self.model
+            env["ANTHROPIC_DEFAULT_SONNET_MODEL"] = self.model
+            env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] = self.model
+            env["CLAUDE_CODE_SUBAGENT_MODEL"] = self.model
+            logger.info(
+                "Claude Code proposer routed via %s (model=%s)",
+                api_base, self.model,
+            )
+
+        return env
+
+    @property
+    def _claude_model_flag(self) -> str:
+        """Return the --model flag value for Claude Code CLI.
+
+        When using OpenRouter proxy, must use 'opus'/'sonnet'/'haiku'
+        (the actual model ID is in ANTHROPIC_DEFAULT_*_MODEL env var).
+        When using Bedrock directly, pass the raw model ID.
+        """
+        api_base = self.config.extra.get("proposer_api_base") or os.environ.get("ANTHROPIC_BASE_URL")
+        if api_base:
+            # Map OpenRouter model IDs to Claude Code model aliases
+            model_lower = self.model.lower()
+            if "opus" in model_lower:
+                return "opus"
+            elif "haiku" in model_lower:
+                return "haiku"
+            else:
+                return "sonnet"
+        return self.model
+
     def _run_claude_code(self, prompt: str, workspace_root: Path) -> dict[str, Any]:
         """Invoke Claude Code CLI as the proposer.
 
         Runs in non-interactive mode (-p) with:
-          - --model: Bedrock Opus 4.6
+          - --model: OpenRouter model ID (via miromind proxy) or Bedrock ID
           - --max-turns: bounded exploration
           - --dangerously-skip-permissions: no interactive approval
           - cwd: workspace root (Claude Code discovers CLAUDE.md as skill)
@@ -726,10 +793,12 @@ class MetaHarnessEngine(EvolutionEngine):
         skill discovery loads CLAUDE.md automatically, replacing the old
         --bare --system-prompt approach.
         """
+        env = self._build_claude_env()
+
         cmd = [
             "claude",
             "-p", prompt,
-            "--model", self.model,
+            "--model", self._claude_model_flag,
             "--max-turns", str(self.max_turns),
             "--dangerously-skip-permissions",
             "--output-format", "json",
@@ -748,6 +817,7 @@ class MetaHarnessEngine(EvolutionEngine):
                 text=True,
                 timeout=self.timeout_sec,
                 cwd=str(workspace_root),
+                env=env,
             )
 
             output = proc.stdout.strip()
