@@ -49,6 +49,7 @@ from agent_evolve.agents.terminal.agent import TerminalAgent, _extract_conversat
 from agent_evolve.agents.terminal.dataset import load_all_tasks, TB2Task
 from agent_evolve.agents.terminal.docker_env import TB2Container, pull_image
 from agent_evolve.algorithms.adaptive_skill import AdaptiveSkillEngine
+from agent_evolve.algorithms.mas_adaptive_skill import MasAdaptiveSkillEngine
 from agent_evolve.config import EvolveConfig
 from agent_evolve.engine.observer import Observer
 from agent_evolve.types import Feedback, Observation, Task, Trajectory
@@ -580,6 +581,7 @@ def _run_evolve_cycle(
     batch_results: list[dict],
     evo_number: int,
     config: EvolveConfig,
+    evolver_name: str = "adaptive_skill",
 ) -> dict:
     """Collect observations from batch results and run one evolution cycle."""
     observations = []
@@ -611,7 +613,10 @@ def _run_evolve_cycle(
 
     recent_logs = observer.get_recent_logs(n_batches=1)
 
-    evolver = AdaptiveSkillEngine(config)
+    if evolver_name == "mas_adaptive_skill":
+        evolver = MasAdaptiveSkillEngine(config)
+    else:
+        evolver = AdaptiveSkillEngine(config)
     evolve_result = evolver.evolve(
         workspace=agent.workspace,
         observation_logs=recent_logs,
@@ -691,6 +696,10 @@ def main():
                    help="v39: protect existing skills from modification, evolver can only ADD new skills")
     p.add_argument("--no-skills", action="store_true", default=False,
                    help="Remove all skills from workspace (vanilla baseline, no skill guidance)")
+    p.add_argument("--evolver", type=str, default="adaptive_skill",
+                   choices=["adaptive_skill", "mas_adaptive_skill"],
+                   help="Evolution algorithm: 'adaptive_skill' (single-agent) or "
+                        "'mas_adaptive_skill' (multi-agent system)")
 
     # Evolution
     p.add_argument("--seed-workspace", type=str, default="seed_workspaces/terminal",
@@ -935,7 +944,8 @@ def main():
 
             try:
                 evolve_result = _run_evolve_cycle(
-                    agent, observer, batch_results, evo_number, config
+                    agent, observer, batch_results, evo_number, config,
+                    evolver_name=args.evolver,
                 )
                 evo_elapsed = time.time() - evo_t0
                 new_skills = evolve_result.get("new_skills", 0)

@@ -9,9 +9,15 @@ try:
 except ImportError:
     AdaptiveEvolveEngine = None
 
+try:
+    from .mas_adaptive_skill import MasAdaptiveSkillEngine
+except ImportError:
+    MasAdaptiveSkillEngine = None
+
 __all__ = [
     "AEvolveEngine",
     "AdaptiveEvolveEngine",
     "AdaptiveSkillEngine",
+    "MasAdaptiveSkillEngine",
     "MetaHarnessEngine",
 ]
