@@ -47,6 +47,9 @@ _BENCHMARK_REGISTRY: dict[str, str] = {
     "terminal-bench": "agent_evolve.benchmarks.terminal2.Terminal2Benchmark",
     "skill-bench": "agent_evolve.benchmarks.skill_bench.SkillBenchBenchmark",
     "internal-swe": "agent_evolve.benchmarks.internal_swe.InternalSweBenchmark",
+    "arc-agi-3": "agent_evolve.benchmarks.arc_agi3.ArcAgi3Benchmark",
+    "arc-agi3": "agent_evolve.benchmarks.arc_agi3.ArcAgi3Benchmark",
+    "arc": "agent_evolve.benchmarks.arc_agi3.ArcAgi3Benchmark",
 }
 
 # Registry of seed workspace names -> paths (relative to package root)
@@ -60,6 +63,13 @@ _SEED_REGISTRY: dict[str, str] = {
     "terminal": "terminal",
     "terminal2": "terminal",
     "terminal-bench": "terminal",
+    "clawcode": "clawcode",
+    "claw-code": "clawcode",
+    "arc": "arc",
+    "arc-agi-3": "arc",
+    "arc-mas": "arc-mas",
+    "arc-agi-3-mas": "arc-mas",
+    "arc-agi3": "arc",
     "mcp-mh": "mcp_mh",
 }
 

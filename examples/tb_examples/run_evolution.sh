@@ -25,6 +25,7 @@ EVOLVE_LIMIT=20
 EVAL_LIMIT=""
 MAX_SKILLS=6
 EXCLUDE=""
+EVOLVER="adaptive_skill"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -34,6 +35,7 @@ while [[ $# -gt 0 ]]; do
         --eval-limit)    EVAL_LIMIT="$2";     shift 2 ;;
         --max-skills)    MAX_SKILLS="$2";     shift 2 ;;
         --exclude)       EXCLUDE="$2";        shift 2 ;;
+        --evolver)       EVOLVER="$2";        shift 2 ;;
         *) echo "Unknown flag: $1"; exit 1 ;;
     esac
 done
@@ -51,7 +53,7 @@ if [[ -n "$EXCLUDE" ]]; then
 fi
 
 COMMON="--solver react $EXCLUDE_FLAG --workers $WORKERS"
-EVOLVE_FLAGS="--trajectory-only --skills-only --protect-skills --max-skills $MAX_SKILLS"
+EVOLVE_FLAGS="--trajectory-only --skills-only --protect-skills --max-skills $MAX_SKILLS --evolver $EVOLVER"
 OUTPUT="--log-dir $LOG_DIR --output $LOG_DIR/results.jsonl --errors $LOG_DIR/errors.jsonl"
 
 mkdir -p "$LOG_DIR"
@@ -65,6 +67,7 @@ echo "  Phase 2:       evaluate ${EVAL_LIMIT:-all remaining} tasks (no evolution
 echo "  Workers:       ${WORKERS}"
 echo "  Max skills:    ${MAX_SKILLS}"
 echo "  Exclude:       ${EXCLUDE:-none}"
+echo "  Evolver:       ${EVOLVER}"
 echo "  Evolve flags:  trajectory-only, skills-only, protect-skills"
 echo "============================================================"
 echo ""
